@@ -177,7 +177,6 @@ func run(args options) {
 	}
 
 	initConfig()
-	initServices()
 
 	if !Context.firstRun {
 		// Do the upgrade if necessary

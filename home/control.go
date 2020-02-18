@@ -175,7 +175,6 @@ func registerControlHandlers() {
 
 	RegisterFilteringHandlers()
 	RegisterTLSHandlers()
-	RegisterBlockedServicesHandlers()
 	RegisterAuthHandlers()
 
 	http.HandleFunc("/dns-query", postInstall(handleDOH))

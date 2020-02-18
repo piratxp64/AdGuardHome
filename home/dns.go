@@ -174,7 +174,7 @@ func getUpstreamsByClient(clientAddr string) []upstream.Upstream {
 
 // If a client has his own settings, apply them
 func applyAdditionalFiltering(clientAddr string, setts *dnsfilter.RequestFilteringSettings) {
-	ApplyBlockedServices(setts, config.DNS.BlockedServices)
+	Context.dnsFilter.ApplyBlockedServices(setts, nil, true)
 
 	if len(clientAddr) == 0 {
 		return
@@ -188,7 +188,7 @@ func applyAdditionalFiltering(clientAddr string, setts *dnsfilter.RequestFilteri
 	log.Debug("Using settings for client with IP %s", clientAddr)
 
 	if c.UseOwnBlockedServices {
-		ApplyBlockedServices(setts, c.BlockedServices)
+		Context.dnsFilter.ApplyBlockedServices(setts, c.BlockedServices, false)
 	}
 
 	setts.ClientTags = c.Tags

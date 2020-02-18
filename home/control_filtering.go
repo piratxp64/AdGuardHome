@@ -341,7 +341,7 @@ func handleCheckHost(w http.ResponseWriter, r *http.Request) {
 
 	setts := Context.dnsFilter.GetConfig()
 	setts.FilteringEnabled = true
-	ApplyBlockedServices(&setts, config.DNS.BlockedServices)
+	Context.dnsFilter.ApplyBlockedServices(&setts, nil, true)
 	result, err := Context.dnsFilter.CheckHost(host, dns.TypeA, &setts)
 	if err != nil {
 		httpError(w, http.StatusInternalServerError, "couldn't apply filtering: %s: %s", host, err)
