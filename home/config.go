@@ -49,8 +49,8 @@ type configuration struct {
 	// An active session is automatically refreshed once a day.
 	WebSessionTTLHours uint32 `yaml:"web_session_ttl"`
 
-	DNS dnsConfig `yaml:"dns"`
-	TLS tlsConfig `yaml:"tls"`
+	DNS dnsConfig         `yaml:"dns"`
+	TLS tlsConfigSettings `yaml:"tls"`
 
 	Filters          []filter `yaml:"filters"`
 	WhitelistFilters []filter `yaml:"whitelist_filters"`
@@ -100,33 +100,6 @@ type tlsConfigSettings struct {
 	dnsforward.TLSConfig `yaml:",inline" json:",inline"`
 }
 
-// field ordering is not important -- these are for API and are recalculated on each run
-type tlsConfigStatus struct {
-	ValidCert  bool      `yaml:"-" json:"valid_cert"`           // ValidCert is true if the specified certificates chain is a valid chain of X509 certificates
-	ValidChain bool      `yaml:"-" json:"valid_chain"`          // ValidChain is true if the specified certificates chain is verified and issued by a known CA
-	Subject    string    `yaml:"-" json:"subject,omitempty"`    // Subject is the subject of the first certificate in the chain
-	Issuer     string    `yaml:"-" json:"issuer,omitempty"`     // Issuer is the issuer of the first certificate in the chain
-	NotBefore  time.Time `yaml:"-" json:"not_before,omitempty"` // NotBefore is the NotBefore field of the first certificate in the chain
-	NotAfter   time.Time `yaml:"-" json:"not_after,omitempty"`  // NotAfter is the NotAfter field of the first certificate in the chain
-	DNSNames   []string  `yaml:"-" json:"dns_names"`            // DNSNames is the value of SubjectAltNames field of the first certificate in the chain
-
-	// key status
-	ValidKey bool   `yaml:"-" json:"valid_key"`          // ValidKey is true if the key is a valid private key
-	KeyType  string `yaml:"-" json:"key_type,omitempty"` // KeyType is one of RSA or ECDSA
-
-	// is usable? set by validator
-	ValidPair bool `yaml:"-" json:"valid_pair"` // ValidPair is true if both certificate and private key are correct
-
-	// warnings
-	WarningValidation string `yaml:"-" json:"warning_validation,omitempty"` // WarningValidation is a validation warning message with the issue description
-}
-
-// field ordering is important -- yaml fields will mirror ordering from here
-type tlsConfig struct {
-	tlsConfigSettings `yaml:",inline" json:",inline"`
-	tlsConfigStatus   `yaml:"-" json:",inline"`
-}
-
 // initialize to default values, will be changed later when reading config or parsing command line
 var config = configuration{
 	BindPort: 3000,
@@ -146,11 +119,9 @@ var config = configuration{
 		FilteringEnabled:           true, // whether or not use filter lists
 		FiltersUpdateIntervalHours: 24,
 	},
-	TLS: tlsConfig{
-		tlsConfigSettings: tlsConfigSettings{
-			PortHTTPS:      443,
-			PortDNSOverTLS: 853, // needs to be passed through to dnsproxy
-		},
+	TLS: tlsConfigSettings{
+		PortHTTPS:      443,
+		PortDNSOverTLS: 853, // needs to be passed through to dnsproxy
 	},
 	DHCP: dhcpd.ServerConfig{
 		LeaseDuration: 86400,
@@ -224,12 +195,6 @@ func parseConfig() error {
 		config.DNS.FiltersUpdateIntervalHours = 24
 	}
 
-	status := tlsConfigStatus{}
-	if !tlsLoadConfig(&config.TLS, &status) {
-		log.Error("%s", status.WarningValidation)
-		return err
-	}
-
 	return nil
 }
 
@@ -257,6 +222,11 @@ func (c *configuration) write() error {
 
 	if Context.auth != nil {
 		config.Users = Context.auth.GetUsers()
+	}
+	if Context.tls != nil {
+		tlsConf := tlsConfigSettings{}
+		Context.tls.WriteDiskConfig(&tlsConf)
+		config.TLS = tlsConf
 	}
 
 	if Context.stats != nil {
@@ -302,23 +272,6 @@ func (c *configuration) write() error {
 	err = file.SafeWrite(configFile, yamlText)
 	if err != nil {
 		log.Error("Couldn't save YAML config: %s", err)
-		return err
-	}
-
-	return nil
-}
-
-func writeAllConfigs() error {
-	err := config.write()
-	if err != nil {
-		log.Error("Couldn't write config: %s", err)
-		return err
-	}
-
-	userFilter := userFilter()
-	err = userFilter.save()
-	if err != nil {
-		log.Error("Couldn't save the user filter: %s", err)
 		return err
 	}
 

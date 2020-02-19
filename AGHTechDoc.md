@@ -70,6 +70,7 @@ Contents:
 
 ![](doc/agh-arch.png)
 
+	tls -> web, dns
 
 
 ## First startup
