@@ -8,7 +8,6 @@ import (
 
 	"github.com/AdguardTeam/golibs/jsonutil"
 	"github.com/AdguardTeam/golibs/log"
-	"github.com/miekg/dns"
 )
 
 func httpError(r *http.Request, w http.ResponseWriter, code int, format string, args ...interface{}) {
@@ -20,11 +19,9 @@ func httpError(r *http.Request, w http.ResponseWriter, code int, format string, 
 }
 
 type request struct {
-	olderThan            string
-	filterDomain         string
-	filterClient         string
-	filterQuestionType   string
-	filterResponseStatus string
+	olderThan      string
+	search         string
+	responseStatus string
 }
 
 // "value" -> value, return TRUE
@@ -42,14 +39,12 @@ func (l *queryLog) handleQueryLog(w http.ResponseWriter, r *http.Request) {
 	req := request{}
 	q := r.URL.Query()
 	req.olderThan = q.Get("older_than")
-	req.filterDomain = q.Get("filter_domain")
-	req.filterClient = q.Get("filter_client")
-	req.filterQuestionType = q.Get("filter_question_type")
-	req.filterResponseStatus = q.Get("filter_response_status")
+	req.search = q.Get("search")
+	req.responseStatus = q.Get("response_status")
 
 	params := getDataParams{
-		Domain:         req.filterDomain,
-		Client:         req.filterClient,
+		Domain:         req.search,
+		Client:         req.search,
 		ResponseStatus: responseStatusAll,
 	}
 	if len(req.olderThan) != 0 {
@@ -67,17 +62,8 @@ func (l *queryLog) handleQueryLog(w http.ResponseWriter, r *http.Request) {
 		params.StrictMatchClient = true
 	}
 
-	if len(req.filterQuestionType) != 0 {
-		_, ok := dns.StringToType[req.filterQuestionType]
-		if !ok {
-			httpError(r, w, http.StatusBadRequest, "invalid question_type")
-			return
-		}
-		params.QuestionType = req.filterQuestionType
-	}
-
-	if len(req.filterResponseStatus) != 0 {
-		switch req.filterResponseStatus {
+	if len(req.responseStatus) != 0 {
+		switch req.responseStatus {
 		case "filtered":
 			params.ResponseStatus = responseStatusFiltered
 		default:

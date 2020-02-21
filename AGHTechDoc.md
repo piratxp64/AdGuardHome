@@ -1223,16 +1223,12 @@ Request:
 
 	GET /control/querylog
 	?older_than=2006-01-02T15:04:05.999999999Z07:00
-	&filter_domain=...
-	&filter_client=...
-	&filter_question_type=A | AAAA
-	&filter_response_status= | filtered
+	&search=...
+	&response_status= | filtered
 
 `older_than` setting is used for paging.  UI uses an empty value for `older_than` on the first request and gets the latest log entries.  To get the older entries, UI sets `older_than` to the `oldest` value from the server's response.
 
-If "filter" settings are set, server returns only entries that match the specified request.
-
-For `filter.domain` and `filter.client` the server matches substrings by default: `adguard.com` matches `www.adguard.com`.  Strict matching can be enabled by enclosing the value in double quotes: `"adguard.com"` matches `adguard.com` but doesn't match `www.adguard.com`.
+If search settings are set, server returns only entries that match the specified request.  For `search` value, the server matches substrings by default: `adguard.com` matches `www.adguard.com`.  Strict matching can be enabled by enclosing the value in double quotes: `"adguard.com"` matches `adguard.com` but doesn't match `www.adguard.com`.
 
 Response:
 
