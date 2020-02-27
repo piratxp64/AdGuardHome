@@ -639,7 +639,7 @@ func New(c *Config, blockFilters []Filter) *Dnsfilter {
 	initBlockedServices()
 
 	if blockFilters != nil {
-		err := d.initFiltering(blockFilters)
+		err := d.initFiltering(nil, blockFilters)
 		if err != nil {
 			log.Error("Can't initialize filtering subsystem: %s", err)
 			d.Close()
