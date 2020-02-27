@@ -87,7 +87,9 @@ func (l *queryLog) readNextEntry(r *QLogReader, params getDataParams) (*logEntry
 	}
 
 	entry := logEntry{}
-	decodeLogEntry(&entry, line)
+	if !decodeLogEntry(&entry, line, params) {
+		return nil, timestamp, nil
+	}
 
 	// Full check of the deserialized log entry
 	if !matchesGetDataParams(&entry, params) {
@@ -115,13 +117,6 @@ func (l *queryLog) openReader() (*QLogReader, error) {
 // this method does not guarantee anything and the reason is to do a quick check
 // without deserializing anything
 func quickMatchesGetDataParams(line string, params getDataParams) bool {
-	if params.ResponseStatus == responseStatusFiltered {
-		boolVal, ok := readJSONBool(line, "IsFiltered")
-		if !ok || !boolVal {
-			return false
-		}
-	}
-
 	if len(params.Domain) != 0 {
 		val := readJSONValue(line, "QH")
 		if len(val) == 0 {
@@ -157,9 +152,33 @@ func quickMatchesGetDataParams(line string, params getDataParams) bool {
 	return true
 }
 
+// matchesGetDataParams - returns true if the entry matches the search parameters (ResponseStatus)
+func matchesResponseStatus(entry *logEntry, params getDataParams) bool {
+	r := entry.Result.Reason
+	if params.ResponseStatus == responseStatusBlock &&
+		!(r == dnsfilter.FilteredBlackList ||
+			r == dnsfilter.FilteredBlockedService) {
+		return false
+	}
+
+	if params.ResponseStatus == responseStatusWhitelist &&
+		r != dnsfilter.NotFilteredWhiteList {
+		return false
+	}
+
+	if params.ResponseStatus == responseStatusProcessed &&
+		(r == dnsfilter.FilteredBlackList ||
+			r == dnsfilter.FilteredBlockedService ||
+			r == dnsfilter.NotFilteredWhiteList) {
+		return false
+	}
+
+	return true
+}
+
 // matchesGetDataParams - returns true if the entry matches the search parameters
 func matchesGetDataParams(entry *logEntry, params getDataParams) bool {
-	if params.ResponseStatus == responseStatusFiltered && !entry.Result.IsFiltered {
+	if !matchesResponseStatus(entry, params) {
 		return false
 	}
 
@@ -188,7 +207,7 @@ func matchesGetDataParams(entry *logEntry, params getDataParams) bool {
 
 // decodeLogEntry - decodes query log entry from a line
 // nolint (gocyclo)
-func decodeLogEntry(ent *logEntry, str string) {
+func decodeLogEntry(ent *logEntry, str string, params getDataParams) bool {
 	var b bool
 	var i int
 	var err error
@@ -228,6 +247,9 @@ func decodeLogEntry(ent *logEntry, str string) {
 		case "Reason":
 			i, err = strconv.Atoi(v)
 			ent.Result.Reason = dnsfilter.Reason(i)
+			if !matchesResponseStatus(ent, params) {
+				return false
+			}
 
 		case "Upstream":
 			ent.Upstream = v
@@ -263,6 +285,7 @@ func decodeLogEntry(ent *logEntry, str string) {
 			break
 		}
 	}
+	return true
 }
 
 // Get bool value from "key":bool

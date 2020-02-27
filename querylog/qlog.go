@@ -188,7 +188,9 @@ type responseStatusType int32
 // Response status constants
 const (
 	responseStatusAll responseStatusType = iota + 1
-	responseStatusFiltered
+	responseStatusBlock
+	responseStatusWhitelist
+	responseStatusProcessed
 )
 
 // Gets log entries

@@ -64,8 +64,12 @@ func (l *queryLog) handleQueryLog(w http.ResponseWriter, r *http.Request) {
 
 	if len(req.responseStatus) != 0 {
 		switch req.responseStatus {
-		case "filtered":
-			params.ResponseStatus = responseStatusFiltered
+		case "blocked":
+			params.ResponseStatus = responseStatusBlock
+		case "whitelisted":
+			params.ResponseStatus = responseStatusWhitelist
+		case "processed":
+			params.ResponseStatus = responseStatusProcessed
 		default:
 			httpError(r, w, http.StatusBadRequest, "invalid response_status")
 			return

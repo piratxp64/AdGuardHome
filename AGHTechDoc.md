@@ -1189,8 +1189,8 @@ When a new DNS request is received and processed, we store information about thi
 	"QH":"...", // target host name without the last dot
 	"QT":"...", // question type
 	"QC":"...", // question class
-	"Answer":"...",
-	"OrigAnswer":"...",
+	"Answer":"base64 data",
+	"OrigAnswer":"base64 data",
 	"Result":{
 		"IsFiltered":true,
 		"Reason":3,
@@ -1224,11 +1224,16 @@ Request:
 	GET /control/querylog
 	?older_than=2006-01-02T15:04:05.999999999Z07:00
 	&search=...
-	&response_status= | filtered
+	&response_status=""|blocked|whitelisted|processed
 
 `older_than` setting is used for paging.  UI uses an empty value for `older_than` on the first request and gets the latest log entries.  To get the older entries, UI sets `older_than` to the `oldest` value from the server's response.
 
 If search settings are set, server returns only entries that match the specified request.  For `search` value, the server matches substrings by default: `adguard.com` matches `www.adguard.com`.  Strict matching can be enabled by enclosing the value in double quotes: `"adguard.com"` matches `adguard.com` but doesn't match `www.adguard.com`.
+
+`response_status`:
+* blocked: only blocked entries
+* whitelisted: only white-listed entries
+* processed: all not blocked, not white-listed entries
 
 Response:
 
