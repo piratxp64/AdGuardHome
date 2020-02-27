@@ -179,6 +179,7 @@ type ServerConfig struct {
 
 	FilteringConfig
 	TLSConfig
+	TLSAllowUnencryptedDOH bool
 
 	// Called when the configuration is changed by HTTP request
 	ConfigModified func()
