@@ -288,22 +288,6 @@ func decodeLogEntry(ent *logEntry, str string, params getDataParams) bool {
 	return true
 }
 
-// Get bool value from "key":bool
-func readJSONBool(s, name string) (bool, bool) {
-	i := strings.Index(s, "\""+name+"\":")
-	if i == -1 {
-		return false, false
-	}
-	start := i + 1 + len(name) + 2
-	b := false
-	if strings.HasPrefix(s[start:], "true") {
-		b = true
-	} else if !strings.HasPrefix(s[start:], "false") {
-		return false, false
-	}
-	return b, true
-}
-
 // Get value from "key":"value"
 func readJSONValue(s, name string) string {
 	i := strings.Index(s, "\""+name+"\":\"")
