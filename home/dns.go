@@ -167,8 +167,8 @@ func generateServerConfig() dnsforward.ServerConfig {
 				Port: tlsConf.PortDNSOverTLS,
 			}
 		}
-		newconfig.TLSAllowUnencryptedDOH = tlsConf.AllowUnencryptedDOH
 	}
+	newconfig.TLSAllowUnencryptedDOH = tlsConf.AllowUnencryptedDOH
 
 	newconfig.FilterHandler = applyAdditionalFiltering
 	newconfig.GetUpstreamsByClient = getUpstreamsByClient
