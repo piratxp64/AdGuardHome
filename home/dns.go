@@ -47,6 +47,7 @@ func initDNSServer() error {
 		BaseDir:        baseDir,
 		Interval:       config.DNS.QueryLogInterval,
 		MemSize:        config.DNS.QueryLogMemSize,
+		HideClientIP:   config.DNS.HideClientIP,
 		ConfigModified: onConfigModified,
 		HTTPRegister:   httpRegister,
 	}

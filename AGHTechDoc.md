@@ -1285,6 +1285,7 @@ Request:
 	{
 		"enabled": true | false
 		"interval": 1 | 7 | 30 | 90
+		"hide_client_ip": true | false // hide clients' IP addresses
 	}
 
 Response:
@@ -1305,6 +1306,7 @@ Response:
 	{
 		"enabled": true | false
 		"interval": 1 | 7 | 30 | 90
+		"hide_client_ip": true | false
 	}
 
 

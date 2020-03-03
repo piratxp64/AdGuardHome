@@ -106,8 +106,9 @@ func (l *queryLog) handleQueryLogClear(w http.ResponseWriter, r *http.Request) {
 }
 
 type qlogConfig struct {
-	Enabled  bool   `json:"enabled"`
-	Interval uint32 `json:"interval"`
+	Enabled      bool   `json:"enabled"`
+	Interval     uint32 `json:"interval"`
+	HideClientIP bool   `json:"hide_client_ip"`
 }
 
 // Get configuration
