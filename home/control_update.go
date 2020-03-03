@@ -52,7 +52,16 @@ func getVersionResp(data []byte) []byte {
 	}
 	_, ok := versionJSON[dloadName]
 	if ok && ret["new_version"] != versionString && versionString >= selfUpdateMinVersion {
-		ret["can_autoupdate"] = true
+		canUpdate := true
+		if runtime.GOOS != "windows" {
+			// On UNIX, if we're running under a regular user,
+			//  but with CAP_NET_BIND_SERVICE set on a binary file,
+			//  and we're listening on ports <1024,
+			//  we won't be able to restart after we replace the binary file,
+			//  because we'll lose CAP_NET_BIND_SERVICE capability.
+			canUpdate, _ = util.HaveAdminRights()
+		}
+		ret["can_autoupdate"] = canUpdate
 	}
 
 	d, _ := json.Marshal(ret)
