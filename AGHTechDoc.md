@@ -1297,6 +1297,10 @@ Response:
 2. `GET /control/querylog` response data will contain modified client IP addresses (masked /24 or /112).
 3. Searching by client IP won't work for the previously stored entries.
 
+How `hide_client_ip` affects Stats:
+1. After AGH restart, new stats entries will contain modified client IP addresses.
+2. Existing entries are not affected.
+
 
 ### API: Get querylog parameters
 
