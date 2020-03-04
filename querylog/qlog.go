@@ -2,6 +2,7 @@ package querylog
 
 import (
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -122,7 +123,7 @@ func (l *queryLog) Add(params AddParams) {
 
 	now := time.Now()
 	entry := logEntry{
-		IP:   params.ClientIP.String(),
+		IP:   l.getClientIP(params.ClientIP.String()),
 		Time: now,
 
 		Result:   *params.Result,
@@ -195,6 +196,10 @@ const (
 func (l *queryLog) getData(params getDataParams) map[string]interface{} {
 	now := time.Now()
 
+	if len(params.Client) != 0 && l.conf.HideClientIP {
+		params.Client = l.getClientIP(params.Client)
+	}
+
 	// add from file
 	fileEntries, oldest, total := l.searchFiles(params)
 
@@ -245,7 +250,7 @@ func (l *queryLog) getData(params getDataParams) map[string]interface{} {
 	// the elements order is already reversed (from newer to older)
 	for i := 0; i < len(entries); i++ {
 		entry := entries[i]
-		jsonEntry := logEntryToJSONEntry(entry)
+		jsonEntry := l.logEntryToJSONEntry(entry)
 		data = append(data, jsonEntry)
 	}
 
@@ -261,7 +266,26 @@ func (l *queryLog) getData(params getDataParams) map[string]interface{} {
 	return result
 }
 
-func logEntryToJSONEntry(entry *logEntry) map[string]interface{} {
+// Get Client IP address
+func (l *queryLog) getClientIP(clientIP string) string {
+	if l.conf.HideClientIP {
+		ip := net.ParseIP(clientIP)
+		if ip != nil {
+			ip4 := ip.To4()
+			const HideClientIP4Mask = 24
+			const HideClientIP6Mask = 112
+			if ip4 != nil {
+				clientIP = ip4.Mask(net.CIDRMask(HideClientIP4Mask, 32)).String()
+			} else {
+				clientIP = ip.Mask(net.CIDRMask(HideClientIP6Mask, 128)).String()
+			}
+		}
+	}
+
+	return clientIP
+}
+
+func (l *queryLog) logEntryToJSONEntry(entry *logEntry) map[string]interface{} {
 	var msg *dns.Msg
 
 	if len(entry.Answer) > 0 {
@@ -276,7 +300,7 @@ func logEntryToJSONEntry(entry *logEntry) map[string]interface{} {
 		"reason":    entry.Result.Reason.String(),
 		"elapsedMs": strconv.FormatFloat(entry.Elapsed.Seconds()*1000, 'f', -1, 64),
 		"time":      entry.Time.Format(time.RFC3339Nano),
-		"client":    entry.IP,
+		"client":    l.getClientIP(entry.IP),
 	}
 	jsonEntry["question"] = map[string]interface{}{
 		"host":  entry.QHost,

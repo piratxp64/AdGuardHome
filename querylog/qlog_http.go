@@ -116,6 +116,7 @@ func (l *queryLog) handleQueryLogInfo(w http.ResponseWriter, r *http.Request) {
 	resp := qlogConfig{}
 	resp.Enabled = l.conf.Enabled
 	resp.Interval = l.conf.Interval
+	resp.HideClientIP = l.conf.HideClientIP
 
 	jsonVal, err := json.Marshal(resp)
 	if err != nil {
@@ -151,6 +152,9 @@ func (l *queryLog) handleQueryLogConfig(w http.ResponseWriter, r *http.Request) 
 	}
 	if req.Exists("interval") {
 		conf.Interval = d.Interval
+	}
+	if req.Exists("hide_client_ip") {
+		conf.HideClientIP = d.HideClientIP
 	}
 	l.conf = &conf
 	l.lock.Unlock()

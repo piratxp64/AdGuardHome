@@ -88,7 +88,7 @@ type dnsConfig struct {
 	QueryLogEnabled  bool   `yaml:"querylog_enabled"`  // if true, query log is enabled
 	QueryLogInterval uint32 `yaml:"querylog_interval"` // time interval for query log (in days)
 	QueryLogMemSize  uint32 `yaml:"querylog_memsize"`  // number of entries kept in memory before they are flushed to disk
-	HideClientIP     bool   `yaml:"hide_client_ip"`
+	HideClientIP     bool   `yaml:"hide_client_ip"`    // hide clients' IP addresses in logs and stats
 
 	dnsforward.FilteringConfig `yaml:",inline"`
 
