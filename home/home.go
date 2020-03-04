@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -277,6 +278,9 @@ func run(args options) {
 }
 
 func httpServerLoop() {
+	var roots *x509.CertPool
+	rootsLoaded := false
+
 	for !Context.httpsServer.shutdown {
 		Context.httpsServer.cond.L.Lock()
 		// this mechanism doesn't let us through until all conditions are met
@@ -310,12 +314,18 @@ func httpServerLoop() {
 		}
 		Context.httpsServer.cond.L.Unlock()
 
+		if !rootsLoaded && roots == nil {
+			roots = dnsforward.LoadSystemRootCAs()
+			rootsLoaded = true
+		}
+
 		// prepare HTTPS server
 		Context.httpsServer.server = &http.Server{
 			Addr: address,
 			TLSConfig: &tls.Config{
 				Certificates: []tls.Certificate{cert},
 				MinVersion:   tls.VersionTLS12,
+				RootCAs:      roots,
 			},
 		}
 
