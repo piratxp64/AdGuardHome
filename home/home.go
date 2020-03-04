@@ -280,6 +280,7 @@ func run(args options) {
 func httpServerLoop() {
 	var roots *x509.CertPool
 	rootsLoaded := false
+	ciphers := dnsforward.InitTLSCiphers()
 
 	for !Context.httpsServer.shutdown {
 		Context.httpsServer.cond.L.Lock()
@@ -326,6 +327,7 @@ func httpServerLoop() {
 				Certificates: []tls.Certificate{cert},
 				MinVersion:   tls.VersionTLS12,
 				RootCAs:      roots,
+				CipherSuites: ciphers,
 			},
 		}
 
