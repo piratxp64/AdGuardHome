@@ -8,15 +8,22 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/AdguardTeam/AdGuardHome/util"
 	"github.com/AdguardTeam/golibs/log"
 	"github.com/miekg/dns"
 )
 
-// IsValidURL - return TRUE if URL is valid
+// IsValidURL - return TRUE if URL or file path is valid
 func IsValidURL(rawurl string) bool {
+	if filepath.IsAbs(rawurl) {
+		// this is a file path
+		return util.FileExists(rawurl)
+	}
+
 	url, err := url.ParseRequestURI(rawurl)
 	if err != nil {
 		return false //Couldn't even parse the rawurl
@@ -42,7 +49,7 @@ func handleFilteringAddURL(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !IsValidURL(fj.URL) {
-		http.Error(w, "Invalid URL", http.StatusBadRequest)
+		http.Error(w, "Invalid URL or file path", http.StatusBadRequest)
 		return
 	}
 
@@ -111,11 +118,6 @@ func handleFilteringRemoveURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !IsValidURL(req.URL) {
-		http.Error(w, "URL parameter is not valid request URL", http.StatusBadRequest)
-		return
-	}
-
 	// go through each element and delete if url matches
 	config.Lock()
 	newFilters := []filter{}
@@ -165,7 +167,7 @@ func handleFilteringSetURL(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !IsValidURL(fj.URL) {
-		http.Error(w, "invalid URL", http.StatusBadRequest)
+		http.Error(w, "invalid URL or file path", http.StatusBadRequest)
 		return
 	}
 

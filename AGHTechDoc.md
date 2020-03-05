@@ -1426,7 +1426,7 @@ Request:
 
 	{
 		"name": "..."
-		"url": "..."
+		"url": "..." // URL or an absolute file path
 		"whitelist": true
 	}
 

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"hash/crc32"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -53,7 +54,7 @@ func defaultFilters() []filter {
 // field ordering is important -- yaml fields will mirror ordering from here
 type filter struct {
 	Enabled     bool
-	URL         string
+	URL         string    // URL or a file path
 	Name        string    `yaml:"name"`
 	RulesCount  int       `yaml:"-"`
 	LastUpdated time.Time `yaml:"-"`
@@ -474,25 +475,40 @@ func parseFilterContents(contents []byte) (int, string) {
 	return rulesCount, name
 }
 
-// Perform upgrade on a filter
-func (filter *filter) update() (bool, error) {
-	log.Tracef("Downloading update for filter %d from %s", filter.ID, filter.URL)
-
-	resp, err := Context.client.Get(filter.URL)
+// Download data from HTTP URL and return the response body
+func download(client *http.Client, url string) ([]byte, error) {
+	resp, err := Context.client.Get(url)
 	if resp != nil && resp.Body != nil {
 		defer resp.Body.Close()
 	}
 	if err != nil {
-		log.Printf("Couldn't request filter from URL %s, skipping: %s", filter.URL, err)
-		return false, err
+		err = fmt.Errorf("Couldn't request filter from URL %s: %s", url, err)
+		return nil, err
 	}
 
 	if resp.StatusCode != 200 {
-		log.Printf("Got status code %d from URL %s, skipping", resp.StatusCode, filter.URL)
-		return false, fmt.Errorf("got status code != 200: %d", resp.StatusCode)
+		err = fmt.Errorf("Got status code %d from URL %s", resp.StatusCode, url)
+		return nil, err
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	return body, nil
+}
+
+// Perform upgrade on a filter
+func (filter *filter) update() (bool, error) {
+	log.Tracef("Downloading update for filter %d from %s", filter.ID, filter.URL)
+
+	var body []byte
+	var err error
+	if filepath.IsAbs(filter.URL) {
+		body, err = ioutil.ReadFile(filter.URL)
+	} else {
+		body, err = download(Context.client, filter.URL)
+	}
 	if err != nil {
 		log.Printf("Couldn't fetch filter contents from URL %s, skipping: %s", filter.URL, err)
 		return false, err
