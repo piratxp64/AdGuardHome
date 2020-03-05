@@ -97,7 +97,7 @@ func LoadSystemRootCAs() *x509.CertPool {
 	return nil
 }
 
-// The same as initDefaultCipherSuites() from src/crypto/tls/common.go
+// InitTLSCiphers - the same as initDefaultCipherSuites() from src/crypto/tls/common.go
 //  but with the difference that we don't use so many other default ciphers.
 func InitTLSCiphers() []uint16 {
 	var ciphers []uint16
