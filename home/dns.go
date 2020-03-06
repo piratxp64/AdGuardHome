@@ -174,6 +174,7 @@ func generateServerConfig() dnsforward.ServerConfig {
 		if config.TLS.PortDNSOverTLS != 0 {
 			newconfig.TLSListenAddr = &net.TCPAddr{IP: net.ParseIP(config.DNS.BindHost), Port: config.TLS.PortDNSOverTLS}
 		}
+		newconfig.TLSConfig.TLSv12Roots = Context.TLSRoots
 	}
 
 	newconfig.FilterHandler = applyAdditionalFiltering

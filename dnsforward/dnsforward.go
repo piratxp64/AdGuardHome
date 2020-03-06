@@ -4,10 +4,8 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"net/http"
-	"os"
 	"runtime"
 	"sort"
 	"strings"
@@ -67,35 +65,6 @@ type Server struct {
 	conf ServerConfig
 }
 
-// LoadSystemRootCAs - load root CAs from the system
-func LoadSystemRootCAs() *x509.CertPool {
-	// Directories with the system root certificates, that aren't supported by Go.crypto
-	dirs := []string{
-		"/opt/etc/ssl/certs", // Entware
-	}
-	roots := x509.NewCertPool()
-	for _, dir := range dirs {
-		fis, err := ioutil.ReadDir(dir)
-		if err != nil {
-			if !os.IsNotExist(err) {
-				log.Error("Opening directory: %s: %s", dir, err)
-			}
-			continue
-		}
-		rootsAdded := false
-		for _, fi := range fis {
-			data, err := ioutil.ReadFile(dir + "/" + fi.Name())
-			if err == nil && roots.AppendCertsFromPEM(data) {
-				rootsAdded = true
-			}
-		}
-		if rootsAdded {
-			return roots
-		}
-	}
-	return nil
-}
-
 // NewServer creates a new instance of the dnsforward.Server
 // Note: this function must be called only once
 func NewServer(dnsFilter *dnsfilter.Dnsfilter, stats stats.Stats, queryLog querylog.QueryLog) *Server {
@@ -103,8 +72,6 @@ func NewServer(dnsFilter *dnsfilter.Dnsfilter, stats stats.Stats, queryLog query
 	s.dnsFilter = dnsFilter
 	s.stats = stats
 	s.queryLog = queryLog
-
-	upstream.RootCAs = LoadSystemRootCAs()
 
 	if runtime.GOARCH == "mips" || runtime.GOARCH == "mipsle" {
 		// Use plain DNS on MIPS, encryption is too slow
@@ -199,6 +166,8 @@ type TLSConfig struct {
 
 	cert     tls.Certificate // nolint(structcheck) - linter thinks that this field is unused, while TLSConfig is directly included into ServerConfig
 	dnsNames []string        // nolint(structcheck) // DNS names from certificate (SAN) or CN value from Subject
+
+	TLSv12Roots *x509.CertPool `yaml:"-" json:"-"` // list of root CAs for TLSv1.2
 }
 
 // ServerConfig represents server configuration.
@@ -371,6 +340,7 @@ func (s *Server) Prepare(config *ServerConfig) error {
 			MinVersion:     tls.VersionTLS12,
 		}
 	}
+	upstream.RootCAs = s.conf.TLSv12Roots
 
 	if len(proxyConfig.Upstreams) == 0 {
 		log.Fatal("len(proxyConfig.Upstreams) == 0")

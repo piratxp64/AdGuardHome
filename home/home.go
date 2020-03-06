@@ -78,6 +78,7 @@ type homeContext struct {
 	pidFileName      string // PID file name.  Empty if no PID file was created.
 	disableUpdate    bool   // If set, don't check for updates
 	controlLock      sync.Mutex
+	TLSRoots         *x509.CertPool // list of root CAs for TLSv1.2
 	transport        *http.Transport
 	client           *http.Client
 	appSignalChannel chan os.Signal // Channel for receiving OS signals by the console app
@@ -135,15 +136,6 @@ func run(args options) {
 		Context.configFilename = "AdGuardHome.yaml"
 	}
 
-	// Init some of the Context fields right away
-	Context.transport = &http.Transport{
-		DialContext: customDialContext,
-	}
-	Context.client = &http.Client{
-		Timeout:   time.Minute * 5,
-		Transport: Context.transport,
-	}
-
 	// configure working dir and config path
 	initWorkingDir(args)
 
@@ -170,6 +162,19 @@ func run(args options) {
 
 	initConfig()
 	initServices()
+
+	// TODO After merging TLS module branch - consider moving this code into TLS module (or Web module)
+	Context.TLSRoots = util.LoadSystemRootCAs()
+	Context.transport = &http.Transport{
+		DialContext: customDialContext,
+		TLSClientConfig: &tls.Config{
+			RootCAs: Context.TLSRoots,
+		},
+	}
+	Context.client = &http.Client{
+		Timeout:   time.Minute * 5, // TODO 5 mins??
+		Transport: Context.transport,
+	}
 
 	if !Context.firstRun {
 		// Do the upgrade if necessary
@@ -278,9 +283,6 @@ func run(args options) {
 }
 
 func httpServerLoop() {
-	var roots *x509.CertPool
-	rootsLoaded := false
-
 	for !Context.httpsServer.shutdown {
 		Context.httpsServer.cond.L.Lock()
 		// this mechanism doesn't let us through until all conditions are met
@@ -314,18 +316,13 @@ func httpServerLoop() {
 		}
 		Context.httpsServer.cond.L.Unlock()
 
-		if !rootsLoaded && roots == nil {
-			roots = dnsforward.LoadSystemRootCAs()
-			rootsLoaded = true
-		}
-
 		// prepare HTTPS server
 		Context.httpsServer.server = &http.Server{
 			Addr: address,
 			TLSConfig: &tls.Config{
 				Certificates: []tls.Certificate{cert},
 				MinVersion:   tls.VersionTLS12,
-				RootCAs:      roots,
+				RootCAs:      Context.TLSRoots,
 			},
 		}
 
