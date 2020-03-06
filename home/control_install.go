@@ -329,9 +329,7 @@ func (web *Web) handleInstallConfigure(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		Context.firstRun = true
 		copyInstallSettings(&config, &curConfig)
-		if err != nil {
-			httpError(w, http.StatusInternalServerError, "%s", err)
-		}
+		httpError(w, http.StatusInternalServerError, "%s", err)
 		return
 	}
 

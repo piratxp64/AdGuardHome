@@ -87,13 +87,13 @@ func (w *Web) TLSConfigChanged(tlsConf tlsConfigSettings) {
 	w.forceHTTPS = (tlsConf.ForceHTTPS && tlsConf.Enabled && tlsConf.PortHTTPS != 0)
 	w.portHTTPS = tlsConf.PortHTTPS
 
-	disabled := tlsConf.Enabled == false ||
-		tlsConf.PortHTTPS == 0 ||
-		len(tlsConf.PrivateKeyData) == 0 ||
-		len(tlsConf.CertificateChainData) == 0
+	enabled := tlsConf.Enabled &&
+		tlsConf.PortHTTPS != 0 &&
+		len(tlsConf.PrivateKeyData) != 0 &&
+		len(tlsConf.CertificateChainData) != 0
 	var cert tls.Certificate
 	var err error
-	if !disabled {
+	if enabled {
 		cert, err = tls.X509KeyPair(tlsConf.CertificateChainData, tlsConf.PrivateKeyData)
 		if err != nil {
 			log.Fatal(err)
@@ -104,7 +104,7 @@ func (w *Web) TLSConfigChanged(tlsConf tlsConfigSettings) {
 	if w.httpsServer.server != nil {
 		w.httpsServer.server.Shutdown(context.TODO())
 	}
-	w.httpsServer.enabled = !disabled
+	w.httpsServer.enabled = enabled
 	w.httpsServer.cert = cert
 	w.httpsServer.cond.Broadcast()
 	w.httpsServer.cond.L.Unlock()
