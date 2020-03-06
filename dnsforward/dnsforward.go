@@ -632,7 +632,10 @@ func processFilteringAfterResponse(ctx *dnsContext) int {
 		}
 	}
 	if s.conf.EnableDNSSEC && !ctx.origReqDNSSEC && optResp != nil && optResp.Do() {
-		// remove RRSIG records from response
+		// Remove RRSIG records from response
+		//  because there is no DO flag in the original request from client,
+		//  but we have EnableDNSSEC set, so we have set DO flag ourselves,
+		//  and now we have to clean up the DNS records our client didn't ask for.
 
 		answers := []dns.RR{}
 		for _, a := range d.Res.Answer {
