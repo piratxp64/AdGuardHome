@@ -610,55 +610,56 @@ func processUpstream(ctx *dnsContext) int {
 	return resultDone
 }
 
+// Process DNSSEC after response from upstream server
+func processDNSSECAfterResponse(ctx *dnsContext) int {
+	d := ctx.proxyCtx
+
+	if !ctx.responseFromUpstream || // don't process response if it's not from upstream servers
+		!ctx.srv.conf.EnableDNSSEC {
+		return resultDone
+	}
+
+	optResp := d.Res.IsEdns0()
+	if !ctx.origReqDNSSEC && optResp != nil && optResp.Do() {
+		return resultDone
+	}
+
+	// Remove RRSIG records from response
+	//  because there is no DO flag in the original request from client,
+	//  but we have EnableDNSSEC set, so we have set DO flag ourselves,
+	//  and now we have to clean up the DNS records our client didn't ask for.
+
+	answers := []dns.RR{}
+	for _, a := range d.Res.Answer {
+		switch a.(type) {
+		case *dns.RRSIG:
+			log.Debug("Removing RRSIG record from response: %v", a)
+		default:
+			answers = append(answers, a)
+		}
+	}
+	d.Res.Answer = answers
+
+	answers = []dns.RR{}
+	for _, a := range d.Res.Ns {
+		switch a.(type) {
+		case *dns.RRSIG:
+			log.Debug("Removing RRSIG record from response: %v", a)
+		default:
+			answers = append(answers, a)
+		}
+	}
+	d.Res.Ns = answers
+
+	return resultDone
+}
+
 // Apply filtering logic after we have received response from upstream servers
-// nolint (gocyclo)
 func processFilteringAfterResponse(ctx *dnsContext) int {
 	s := ctx.srv
 	d := ctx.proxyCtx
 	res := ctx.result
 	var err error
-
-	if !ctx.responseFromUpstream {
-		return resultDone // don't process response if it's not from upstream servers
-	}
-
-	optResp := d.Res.IsEdns0()
-	if optResp != nil && optResp.Do() {
-		optReq := d.Req.IsEdns0()
-		if optReq != nil && !optReq.Do() {
-			// remove DNSSEC flag from response, because there's no DNSSEC flag in request,
-			//  but querylog module needs this value to be accurate
-			optResp.SetDo(false)
-		}
-	}
-	if s.conf.EnableDNSSEC && !ctx.origReqDNSSEC && optResp != nil && optResp.Do() {
-		// Remove RRSIG records from response
-		//  because there is no DO flag in the original request from client,
-		//  but we have EnableDNSSEC set, so we have set DO flag ourselves,
-		//  and now we have to clean up the DNS records our client didn't ask for.
-
-		answers := []dns.RR{}
-		for _, a := range d.Res.Answer {
-			switch a.(type) {
-			case *dns.RRSIG:
-				log.Debug("Removing RRSIG record from response: %v", a)
-			default:
-				answers = append(answers, a)
-			}
-		}
-		d.Res.Answer = answers
-
-		answers = []dns.RR{}
-		for _, a := range d.Res.Ns {
-			switch a.(type) {
-			case *dns.RRSIG:
-				log.Debug("Removing RRSIG record from response: %v", a)
-			default:
-				answers = append(answers, a)
-			}
-		}
-		d.Res.Ns = answers
-	}
 
 	if res.Reason == dnsfilter.ReasonRewrite && len(res.CanonName) != 0 {
 		d.Req.Question[0] = ctx.origQuestion
@@ -738,6 +739,7 @@ func (s *Server) handleDNSRequest(p *proxy.Proxy, d *proxy.DNSContext) error {
 		processInitial,
 		processFilteringBeforeRequest,
 		processUpstream,
+		processDNSSECAfterResponse,
 		processFilteringAfterResponse,
 		processQueryLogsAndStats,
 	}
