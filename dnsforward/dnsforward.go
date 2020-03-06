@@ -166,8 +166,6 @@ type TLSConfig struct {
 
 	cert     tls.Certificate // nolint(structcheck) - linter thinks that this field is unused, while TLSConfig is directly included into ServerConfig
 	dnsNames []string        // nolint(structcheck) // DNS names from certificate (SAN) or CN value from Subject
-
-	TLSv12Roots *x509.CertPool `yaml:"-" json:"-"` // list of root CAs for TLSv1.2
 }
 
 // ServerConfig represents server configuration.
@@ -181,6 +179,8 @@ type ServerConfig struct {
 
 	FilteringConfig
 	TLSConfig
+
+	TLSv12Roots *x509.CertPool // list of root CAs for TLSv1.2
 
 	// Called when the configuration is changed by HTTP request
 	ConfigModified func()
