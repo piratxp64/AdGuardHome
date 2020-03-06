@@ -200,7 +200,7 @@ func verifyCertChain(data *tlsConfigStatus, certChain string, serverName string)
 
 	opts := x509.VerifyOptions{
 		DNSName: serverName,
-		Roots:   Context.TLSRoots,
+		Roots:   Context.tlsRoots,
 	}
 
 	log.Printf("number of certs - %d", len(parsedCerts))

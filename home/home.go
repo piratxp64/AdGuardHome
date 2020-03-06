@@ -78,7 +78,7 @@ type homeContext struct {
 	pidFileName      string // PID file name.  Empty if no PID file was created.
 	disableUpdate    bool   // If set, don't check for updates
 	controlLock      sync.Mutex
-	TLSRoots         *x509.CertPool // list of root CAs for TLSv1.2
+	tlsRoots         *x509.CertPool // list of root CAs for TLSv1.2
 	transport        *http.Transport
 	client           *http.Client
 	appSignalChannel chan os.Signal // Channel for receiving OS signals by the console app
@@ -164,11 +164,11 @@ func run(args options) {
 	initServices()
 
 	// TODO After merging TLS module branch - consider moving this code into TLS module (or Web module)
-	Context.TLSRoots = util.LoadSystemRootCAs()
+	Context.tlsRoots = util.LoadSystemRootCAs()
 	Context.transport = &http.Transport{
 		DialContext: customDialContext,
 		TLSClientConfig: &tls.Config{
-			RootCAs: Context.TLSRoots,
+			RootCAs: Context.tlsRoots,
 		},
 	}
 	Context.client = &http.Client{
@@ -322,7 +322,7 @@ func httpServerLoop() {
 			TLSConfig: &tls.Config{
 				Certificates: []tls.Certificate{cert},
 				MinVersion:   tls.VersionTLS12,
-				RootCAs:      Context.TLSRoots,
+				RootCAs:      Context.tlsRoots,
 			},
 		}
 
